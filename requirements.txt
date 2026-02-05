@@ -1,0 +1,103 @@
+POS Backend: Key Features 
+1. User Management
+
+    Roles: Admin, Cashier, Manager
+
+    Authentication: JWT
+
+    Admins can manage users (CRUD)
+
+    Email Logic:
+
+    Send welcome email with temporary password when a new staff member is added.
+
+    Optional: Send email if password is reset.
+
+2. Product & Inventory Management
+
+    CRUD for products (name, SKU, price, category)
+
+    Track stock levels
+
+    Email Logic:
+
+    Send low stock alert to admin/manager if stock falls below a threshold during sales or stock update.
+
+3. Sales Management
+
+    Record sales transactions: items sold, quantity, total price, cashier
+
+    Automatically update inventory
+
+    Support discounts and multiple payment types (cash/card)
+
+    Email Logic:
+
+    Send receipt/invoice email to customer (if email provided) or manager
+
+    Include item details, total, and cashier info
+
+4. Reports & Analytics
+
+    Daily/weekly/monthly sales reports
+
+    Inventory reports (low stock, out of stock)
+
+    Optional: top-selling products, profit calculation
+
+    Email Logic:
+
+    Daily/weekly sales reports emailed automatically to admins/managers using a cron job
+
+    Optional: Monthly performance summary emailed
+
+5. Optional Advanced Features
+
+Barcode scanning API support
+
+Multi-store support
+
+Audit logs for tracking product, user, and sales changes
+
+HTML/PDF formatting for emailed reports and receipts
+
+Authentication
+
+| Endpoint                    | Method | Description              | Email Logic                                   |
+| --------------------------- | ------ | ------------------------ | --------------------------------------------- |
+| `/api/auth/register`        | POST   | Register new staff/admin | Send **welcome email** with login credentials |
+| `/api/auth/login`           | POST   | Login and return JWT     | None                                          |
+| `/api/auth/forgot-password` | POST   | Request password reset   | Send **password reset email**                 |
+
+    userrs
+
+| Endpoint         | Method | Description      | Email Logic                                       |
+| ---------------- | ------ | ---------------- | ------------------------------------------------- |
+| `/api/users`     | GET    | List all users   | None                                              |
+| `/api/users/:id` | PUT    | Update user info | Optional: notify user by email of account changes |
+| `/api/users/:id` | DELETE | Delete user      | Optional: notify user by email                    |
+
+
+products
+| Endpoint            | Method | Description       | Email Logic                                           |
+| ------------------- | ------ | ----------------- | ----------------------------------------------------- |
+| `/api/products`     | GET    | List all products | None                                                  |
+| `/api/products`     | POST   | Add new product   | None                                                  |
+| `/api/products/:id` | PUT    | Update product    | Send **low stock alert** if updated stock < threshold |
+| `/api/products/:id` | DELETE | Delete product    | Optional: notify admin by email                       |
+
+
+sales
+| Endpoint         | Method | Description       | Email Logic                                   |
+| ---------------- | ------ | ----------------- | --------------------------------------------- |
+| `/api/sales`     | POST   | Create a sale     | Send **receipt email** to customer or manager |
+| `/api/sales`     | GET    | List all sales    | None                                          |
+| `/api/sales/:id` | GET    | View sale details | None                                          |
+
+
+reports
+| Endpoint                 | Method | Description                         | Email Logic                                       |
+| ------------------------ | ------ | ----------------------------------- | ------------------------------------------------- |
+| `/api/reports/daily`     | GET    | Get daily sales report              | Optional: cron job to **email daily report**      |
+| `/api/reports/low-stock` | GET    | List products below stock threshold | Optional: cron job to **email low stock summary** |
+| `/api/reports/monthly`   | GET    | Get monthly performance report      | Cron job to **email monthly summary**             |

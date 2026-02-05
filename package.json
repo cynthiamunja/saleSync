@@ -1,0 +1,20 @@
+{
+  "name": "salesync",
+  "version": "1.0.0",
+  "description": "A POS backend",
+  "license": "ISC",
+  "author": "Cynthia Munja",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.6",
+    "nodemailer": "^8.0.0"
+  }
+}
