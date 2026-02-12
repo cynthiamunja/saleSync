@@ -2,32 +2,47 @@ import { Sale } from "../models/sales.models.js";
 import { Product } from "../models/product.model.js";
 
 export const createSale = async (req, res, next) => {
-  try {
-    const { products, paymentMethod } = req.body; // [{ productId, quantity }]
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-   
-    if (!products || !products.length || !paymentMethod) {
-  return res.status(400).json({ message: "Products and payment method required" });
-}
+  try {
+    const { products, paymentMethod } = req.body;
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        message: "Products array is required"
+      });
+    }
+
+    if (!paymentMethod) {
+      return res.status(400).json({
+        message: "Payment method is required"
+      });
+    }
 
     let totalAmount = 0;
     const saleProducts = [];
 
     for (const item of products) {
-      const product = await Product.findById(item.productId);
+      if (!item.productId || !item.quantity) {
+        throw new Error("Each product must have productId and quantity");
+      }
+
+      const product = await Product.findById(item.productId).session(session);
+
       if (!product || !product.isActive) {
-        return res.status(404).json({ message: `Product not found: ${item.productId}` });
+        throw new Error(`Product not found: ${item.productId}`);
       }
 
       if (item.quantity > product.stockQuantity) {
-        return res.status(400).json({
-          message: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
-        });
+        throw new Error(
+          `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
+        );
       }
 
-      // Reduce stock
+      // Deduct stock
       product.stockQuantity -= item.quantity;
-      await product.save();
+      await product.save({ session });
 
       const lineTotal = product.price * item.quantity;
       totalAmount += lineTotal;
@@ -35,40 +50,50 @@ export const createSale = async (req, res, next) => {
       saleProducts.push({
         product: product._id,
         quantity: item.quantity,
-        price: product.price
+        price: product.price,
+        costPrice: product.costPrice
       });
     }
-const now = new Date();
-const month = String(now.getMonth() + 1).padStart(2, "0");
-const year = now.getFullYear();
 
-// Atomically increment sequence
-const counter = await Counter.findOneAndUpdate(
-  { month, year },
-  { $inc: { sequence: 1 } },
-  { new: true, upsert: true }
-);
+    // Generate receipt number
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
 
-const sequence = String(counter.sequence).padStart(2, "0");
+    const counter = await Counter.findOneAndUpdate(
+      { month, year },
+      { $inc: { sequence: 1 } },
+      { new: true, upsert: true, session }
+    );
 
-const receiptNumber = `sale-${month}-${year}-${sequence}`;
+    const sequence = String(counter.sequence).padStart(3, "0");
+    const receiptNumber = `SALE-${year}-${month}-${sequence}`;
 
-const sale = await Sale.create({
-  receiptNumber,
-  products: saleProducts,
-  totalAmount,
-  cashier: req.user._id,
-  paymentMethod
-});
+    const sale = await Sale.create(
+      [
+        {
+          receiptNumber,
+          products: saleProducts,
+          totalAmount,
+          cashier: req.user._id,
+          paymentMethod
+        }
+      ],
+      { session }
+    );
 
-
+    await session.commitTransaction();
+    session.endSession();
 
     res.status(201).json({
       success: true,
       message: "Sale created successfully",
-      data: sale
+      data: sale[0]
     });
+
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
