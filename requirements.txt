@@ -101,3 +101,7 @@ reports
 | `/api/reports/daily`     | GET    | Get daily sales report              | Optional: cron job to **email daily report**      |
 | `/api/reports/low-stock` | GET    | List products below stock threshold | Optional: cron job to **email low stock summary** |
 | `/api/reports/monthly`   | GET    | Get monthly performance report      | Cron job to **email monthly summary**             |
+
+
+db.products.deleteOne({ _id: "698c2baeebb67b33e8283b46" })
+db.products.deleteOne({ _id: ObjectId("698c591e91bc580c68cb2469") })
