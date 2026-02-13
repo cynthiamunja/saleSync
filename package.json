@@ -21,6 +21,8 @@
     "mongoose": "^9.1.6",
     "nodemailer": "^8.0.0",
     "nodemon": "^3.1.11",
-    "pdfkit": "^0.17.2"
+    "pdfkit": "^0.17.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }

@@ -3,27 +3,31 @@ import connectDB from "./src/config/database.js";
 import app from "./app.js";
 
 dotenv.config({
-    path: './.env'
-})
+  path: "./.env",
+});
 
-const startServer= async()=>{
-  
-    try {
-    console.log("mongodb uri:", process.env.mongoDB_URI);
-    console.log("Loaded port:",process.env.port);
+const startServer = async () => {
+  try {
+    const PORT = process.env.PORT || 4000;
+    const MONGO_URI = process.env.MONGO_URI;
+
+    console.log("MongoDB URI:", MONGO_URI);
+    console.log("Loaded port:", PORT);
 
     await connectDB();
 
-    app.on("error",(error)=>{
-        console.log("ERROR", error);
-        throw error;
+    app.on("error", (error) => {
+      console.error("App error:", error);
+      throw error;
     });
-    
-    app.listen(process.env.port || 8000, ()=>{
-        console.log(`server is running at port ${process.env.port}`)
-    })
-    } catch (error) {
-        console.log("mongo db connection failed")
-    }
-}
+
+    app.listen(PORT, () => {
+      console.log(`Server is running at port ${PORT}`);
+      console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`);
+    });
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+  }
+};
+
 startServer();
