@@ -29,6 +29,8 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *   get:
  *     summary: Get a user by ID
  *     tags: [Users]
+ * *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

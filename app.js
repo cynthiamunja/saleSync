@@ -28,16 +28,25 @@ const swaggerOptions = {
     info: {
       title: "POS Backend API",
       version: "1.0.0",
-      description: "API documentation for your POS system",
+      description: "API documentation for your POS system"
     },
     servers: [
-      {
-        url: "https://sale-sync.onrender.com", // your live URL
-      },
+      { url: "https://sale-sync.onrender.com/" }
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Enter your JWT token here"
+        }
+      }
+    },
   },
-  apis: ["./src/routes/*.js"], // <-- Swagger looks for JSDoc comments here
+  apis: ["./src/routes/*.js"], // your routes
 };
+
 
 const swaggerSpec = swaggerJsDoc(swaggerOptions);
 

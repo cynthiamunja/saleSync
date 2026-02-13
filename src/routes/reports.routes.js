@@ -26,6 +26,8 @@ reportsRouter.route('/exportSalesToPDF').get(authorize(['admin','manager']),expo
  *   get:
  *     summary: Get daily revenue
  *     tags: [Reports]
+ * *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: date
  *         in: query

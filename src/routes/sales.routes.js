@@ -31,6 +31,8 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  *   post:
  *     summary: Create a new sale
  *     tags: [Sales]
+ * *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
