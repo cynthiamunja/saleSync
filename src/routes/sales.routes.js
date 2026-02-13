@@ -18,4 +18,44 @@ salesRouter.get("/getActiveSales", authorize(["admin", "manager"]), getActiveSal
 // Admins/managers can deactivate (soft delete) a sale
 salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deactivateSale);
 
+/**
+ * @swagger
+ * tags:
+ *   name: Sales
+ *   description: Sale management endpoints
+ */
+
+/**
+ * @swagger
+ * /api/v1/sales/createSale:
+ *   post:
+ *     summary: Create a new sale
+ *     tags: [Sales]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               products:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *               paymentMethod:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Sale created successfully
+ *       400:
+ *         description: Bad request
+ */
+salesRouter.post("/createSale", authorize(["cashier"]), createSale);
+
+
 export default salesRouter;
