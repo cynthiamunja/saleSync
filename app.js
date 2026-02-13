@@ -1,10 +1,10 @@
 import express from "express";
-import authRouter from "./routes/auth.routes.js";
-import categoryRouter from "./routes/category.routes.js";
-import productsRouter from "./routes/products.routes.js";
-import salesRouter from "./routes/sales.routes.js";
-import reportsRouter from "./routes/reports.routes.js";
-import userRouter from "./routes/user.routes.js";
+import authRouter from "./src/routes/auth.routes.js";
+import categoryRouter from "./src/routes/category.routes.js";
+import productsRouter from "./src/routes/products.routes.js";
+import salesRouter from "./src/routes/sales.routes.js";
+import reportsRouter from "./src/routes/reports.routes.js";
+import userRouter from "./src/routes/user.routes.js";
 
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
