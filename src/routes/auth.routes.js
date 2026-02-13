@@ -108,7 +108,7 @@ authRouter.route("/login").post(login);
  *   post:
  *     summary: Login a user
  *     tags: [Auth]
- *  *     security:
+ *      security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true

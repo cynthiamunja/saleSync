@@ -78,6 +78,8 @@ productsRouter.route('/searchProducts').get(authorize(),searchProducts);
  *   get:
  *     summary: Get product by ID
  *     tags: [Products]
+ *       security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
