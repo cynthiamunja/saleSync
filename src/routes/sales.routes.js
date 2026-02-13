@@ -29,9 +29,9 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  * @swagger
  * /api/v1/sales/createSale:
  *   post:
- *     summary: Create a new sale
+ *     summary: Create a new sale (Cashier only)
  *     tags: [Sales]
- * *     security:
+ *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
@@ -39,6 +39,9 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - products
+ *               - paymentMethod
  *             properties:
  *               products:
  *                 type: array
@@ -54,9 +57,66 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  *     responses:
  *       201:
  *         description: Sale created successfully
- *       400:
- *         description: Bad request
  */
+
+/**
+ * @swagger
+ * /api/v1/sales/my-sales:
+ *   get:
+ *     summary: Get logged-in cashier's sales
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of cashier's sales
+ */
+
+/**
+ * @swagger
+ * /api/v1/sales/getAllSales:
+ *   get:
+ *     summary: Get all sales (Admin/Manager)
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all sales
+ */
+
+/**
+ * @swagger
+ * /api/v1/sales/getActiveSales:
+ *   get:
+ *     summary: Get active sales only (Admin/Manager)
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of active sales
+ */
+
+/**
+ * @swagger
+ * /api/v1/sales/deactivateSale/{id}:
+ *   patch:
+ *     summary: Deactivate a sale (Admin/Manager)
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Sale deactivated successfully
+ */
+
 salesRouter.post("/createSale", authorize(["cashier"]), createSale);
 
 
