@@ -16,5 +16,96 @@ userRouter.route('/adminActivateUser/:id').patch(authorize(["admin"]), adminActi
 userRouter.route('/adminDeactivateUser/:id').patch(authorize(["admin"]), adminDeactivateUser)
 userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers)
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management (admins, managers, cashiers)
+ */
+
+/**
+ * @swagger
+ * /api/v1/users/getUser/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User data returned
+ */
+
+/**
+ * @swagger
+ * /api/v1/users/getCashiers:
+ *   get:
+ *     summary: Get all cashiers
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of cashiers
+ */
+
+/**
+ * @swagger
+ * /api/v1/users/getManagers:
+ *   get:
+ *     summary: Get all managers
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of managers
+ */
+
+/**
+ * @swagger
+ * /api/v1/users/updateUser:
+ *   patch:
+ *     summary: Update current user info
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ */
+
+/**
+ * @swagger
+ * /api/v1/users/adminUpdateUser/{id}:
+ *   patch:
+ *     summary: Admin updates any user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ */
 
 export default userRouter;

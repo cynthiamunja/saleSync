@@ -12,5 +12,57 @@ reportsRouter.route('/TopSellingProducts').get(authorize(['admin','manager']),ge
 reportsRouter.route('/getYearlySummary').get(authorize(['admin','manager']),getYearlySummary)
 reportsRouter.route('/SalesByPaymentMethod').get(authorize(['admin','manager']),getSalesByPaymentMethod)
 reportsRouter.route('/exportSalesToExcel').get(authorize(['admin','manager']),exportSalesToExcel)
-reportsRouter.route('/exportSalesToPDF').get(authorize(['admin','manager']),exportSalesToPDF)
+reportsRouter.route('/exportSalesToPDF').get(authorize(['admin','manager']),exportSalesToPDF);
+/**
+ * @swagger
+ * tags:
+ *   name: Reports
+ *   description: Generate sales reports
+ */
+
+/**
+ * @swagger
+ * /reports/DailyRevenue:
+ *   get:
+ *     summary: Get daily revenue
+ *     tags: [Reports]
+ *     parameters:
+ *       - name: date
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Date in YYYY-MM-DD
+ *     responses:
+ *       200:
+ *         description: Daily revenue summary
+ */
+
+/**
+ * @swagger
+ * /reports/ProfitReport:
+ *   get:
+ *     summary: Get profit report (selling price vs cost price)
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profit report
+ */
+
+/**
+ * @swagger
+ * /reports/TopSellingProducts:
+ *   get:
+ *     summary: Get top selling products
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Top selling products
+ */
+
 export default reportsRouter;
