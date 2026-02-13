@@ -1,107 +1,126 @@
-POS Backend: Key Features 
-1. User Management
-
-    Roles: Admin, Cashier, Manager
-
-    Authentication: JWT
-
-    Admins can manage users (CRUD)
-
-    Email Logic:
-
-    Send welcome email with temporary password when a new staff member is added.
-
-    Optional: Send email if password is reset.
-
-2. Product & Inventory Management
-
-    CRUD for products (name, SKU, price, category)
-
-    Track stock levels
-
-    Email Logic:
-
-    Send low stock alert to admin/manager if stock falls below a threshold during sales or stock update.
-
-3. Sales Management
-
-    Record sales transactions: items sold, quantity, total price, cashier
-
-    Automatically update inventory
-
-    Support discounts and multiple payment types (cash/card)
-
-    Email Logic:
-
-    Send receipt/invoice email to customer (if email provided) or manager
-
-    Include item details, total, and cashier info
-
-4. Reports & Analytics
-
-    Daily/weekly/monthly sales reports
-
-    Inventory reports (low stock, out of stock)
-
-    Optional: top-selling products, profit calculation
-
-    Email Logic:
-
-    Daily/weekly sales reports emailed automatically to admins/managers using a cron job
-
-    Optional: Monthly performance summary emailed
-
-5. Optional Advanced Features
-
-Barcode scanning API support
-
-Multi-store support
-
-Audit logs for tracking product, user, and sales changes
-
-HTML/PDF formatting for emailed reports and receipts
-
-Authentication
-
-| Endpoint                    | Method | Description              | Email Logic                                   |
-| --------------------------- | ------ | ------------------------ | --------------------------------------------- |
-| `/api/auth/register`        | POST   | Register new staff/admin | Send **welcome email** with login credentials |
-| `/api/auth/login`           | POST   | Login and return JWT     | None                                          |
-| `/api/auth/forgot-password` | POST   | Request password reset   | Send **password reset email**                 |
-
-    userrs
-
-| Endpoint         | Method | Description      | Email Logic                                       |
-| ---------------- | ------ | ---------------- | ------------------------------------------------- |
-| `/api/users`     | GET    | List all users   | None                                              |
-| `/api/users/:id` | PUT    | Update user info | Optional: notify user by email of account changes |
-| `/api/users/:id` | DELETE | Delete user      | Optional: notify user by email                    |
 
 
-products
-| Endpoint            | Method | Description       | Email Logic                                           |
-| ------------------- | ------ | ----------------- | ----------------------------------------------------- |
-| `/api/products`     | GET    | List all products | None                                                  |
-| `/api/products`     | POST   | Add new product   | None                                                  |
-| `/api/products/:id` | PUT    | Update product    | Send **low stock alert** if updated stock < threshold |
-| `/api/products/:id` | DELETE | Delete product    | Optional: notify admin by email                       |
+# 1️⃣ **User & Authentication Module**
 
+**Routes:**
 
-sales
-| Endpoint         | Method | Description       | Email Logic                                   |
-| ---------------- | ------ | ----------------- | --------------------------------------------- |
-| `/api/sales`     | POST   | Create a sale     | Send **receipt email** to customer or manager |
-| `/api/sales`     | GET    | List all sales    | None                                          |
-| `/api/sales/:id` | GET    | View sale details | None                                          |
+* `/registerCashier` → anyone can register a cashier (maybe via admin portal)
+* `/adminCreateUser` → admin-only user creation
+* `/managerCreateUser` → manager-only user creation
+* `/login` → login for all users
 
+**Roles:**
 
-reports
-| Endpoint                 | Method | Description                         | Email Logic                                       |
-| ------------------------ | ------ | ----------------------------------- | ------------------------------------------------- |
-| `/api/reports/daily`     | GET    | Get daily sales report              | Optional: cron job to **email daily report**      |
-| `/api/reports/low-stock` | GET    | List products below stock threshold | Optional: cron job to **email low stock summary** |
-| `/api/reports/monthly`   | GET    | Get monthly performance report      | Cron job to **email monthly summary**             |
+* **Admin:** Full control over system and user management
+* **Manager:** Partial control, mostly operational
+* **Cashier:** Limited, mainly sales
+* Users are authorized with `authorize([roles])` middleware
 
+**User Management:**
 
-db.products.deleteOne({ _id: "698c2baeebb67b33e8283b46" })
-db.products.deleteOne({ _id: ObjectId("698c591e91bc580c68cb2469") })
+* Admin/Manager can:
+
+  * Activate/deactivate users
+  * Update user details
+  * Search users
+* Managers specifically handle cashiers (activate, deactivate, update)
+* Cashiers can mostly view themselves and their own sales
+
+---
+
+# 2️⃣ **Categories Module**
+
+**Routes:**
+
+* `/createCategory` → Admin/Manager
+* `/getAllCategories` → Any authorized user
+* `/getOneCategory/:id` → Any authorized user
+* `/updateCategory/:id`, `/deactivateCategory/:id`, `/activateCategory/:id` → Admin/Manager
+* `/searchCategories` → All authorized users
+
+**Purpose:**
+Categorize products (e.g., medicines, supplements). Admins/managers control creation and updates. Everyone can view/search categories.
+
+---
+
+# 3️⃣ **Products Module**
+
+**Routes:**
+
+* `/createProduct` → Admin/Manager
+* `/updateProduct/:id` → Manager
+* `/updateStock/:id` → Manager
+* `/deactivateProduct/:id`, `/activateProduct/:id` → Admin/Manager
+* `/getProducts`, `/getProductById/:id`, `/searchProducts` → All authorized
+
+**Purpose:**
+
+* Products have **stock, price, costPrice, category**.
+* Admin can create or deactivate.
+* Manager can update stock and edit product details.
+* Cashiers **cannot modify products**, only view for sales.
+* Fully role-based access.
+
+---
+
+# 4️⃣ **Sales Module**
+
+**Routes:**
+
+* `/createSale` → Cashiers only
+* `/my-sales` → Cashiers (view own sales)
+* `/getAllSales`, `/getActiveSales` → Admin/Manager
+* `/deactivateSale/:id` → Admin/Manager (soft delete)
+
+**Purpose:**
+
+* Track all sales.
+* Reduce product stock automatically when a sale is made.
+* Admin/Manager can audit and manage sales, including filtering by cashier or date.
+
+---
+
+# 5️⃣ **Reports Module**
+
+**Routes:**
+
+* Daily revenue: `/DailyRevenue` → any authorized
+* Monthly summary & breakdown: `/monthSalesSummary`, `/MonthlyBreakdown` → Admin/Manager
+* Profit reports: `/ProfitReport` → Admin/Manager
+* Top-selling products: `/TopSellingProducts` → Admin/Manager
+* Yearly summary: `/getYearlySummary` → Admin/Manager
+* Sales by payment method: `/SalesByPaymentMethod` → Admin/Manager
+* Export sales: `/exportSalesToExcel`, `/exportSalesToPDF` → Admin/Manager
+
+**Purpose:**
+
+* Analyze sales and revenue at daily, monthly, and yearly levels.
+* Track profits (cost vs selling price).
+* Export data for reporting.
+* Only higher roles (Admin/Manager) can view full reports; cashiers can only view their sales.
+
+---
+
+# 6️⃣ **System Flow & Role Responsibilities**
+
+| Module     | Admin                      | Manager                | Cashier                     |
+| ---------- | -------------------------- | ---------------------- | --------------------------- |
+| Users      | Full create/update         | Manage cashiers        | View self only              |
+| Categories | Create/Update/Activate     | Create/Update/Activate | View/Search                 |
+| Products   | Create/Activate/Deactivate | Update/Stock           | View only                   |
+| Sales      | View/Deactivate/Filter     | View/Deactivate/Filter | Create/View Own             |
+| Reports    | All reports + export       | All reports + export   | Only personal sales summary |
+
+---
+
+# 7️⃣ **Key Features**
+
+* **Role-based access control** enforced via middleware.
+* **Product stock management**: stock reduces automatically on sale.
+* **Soft delete** for sales, products, and users.
+* **Revenue & profit tracking** with daily/monthly/yearly breakdown.
+* **Export functionality** for PDF/Excel.
+* **Cashiers only handle sales**, not inventory or product creation.
+* **Managers** bridge admin policies and cashier operations.
+* **Admins** are superusers with full system control.
+

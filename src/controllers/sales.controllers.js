@@ -1,61 +1,81 @@
 import { Sale } from "../models/sales.models.js";
 import { Product } from "../models/product.model.js";
+import { Counter } from "../models/counter.model.js"; // for receipt sequence
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+
+// Helper to generate PDF receipt
+const generatePDFReceipt = (sale) => {
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
+
+  const fileName = `receipt-${sale.receiptNumber}.pdf`;
+  const filePath = path.join("receipts", fileName);
+
+  // Ensure receipts folder exists
+  if (!fs.existsSync("receipts")) fs.mkdirSync("receipts");
+
+  doc.pipe(fs.createWriteStream(filePath));
+
+  // HEADER
+  doc.fontSize(20).text("POS Receipt", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Receipt Number: ${sale.receiptNumber}`);
+  doc.text(`Date: ${new Date(sale.createdAt).toLocaleString()}`);
+  doc.text(`Cashier ID: ${sale.cashier}`);
+  doc.moveDown();
+
+  // TABLE HEADER
+  doc.fontSize(14).text("Items Purchased:");
+  doc.moveDown(0.5);
+
+  sale.products.forEach((p, index) => {
+    doc.fontSize(12).text(
+      `${index + 1}. Product ID: ${p.product} | Qty: ${p.quantity} | Price: KES ${p.price} | Subtotal: KES ${p.price * p.quantity}`
+    );
+  });
+
+  doc.moveDown();
+  doc.fontSize(14).text(`Total Amount: KES ${sale.totalAmount}`, { align: "right" });
+  doc.end();
+
+  return filePath;
+};
 
 export const createSale = async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const { products, paymentMethod } = req.body;
+    const { products, paymentMethod } = req.body; // [{ productId, quantity }]
 
-    if (!products || !Array.isArray(products) || products.length === 0) {
-      return res.status(400).json({
-        message: "Products array is required"
-      });
-    }
-
-    if (!paymentMethod) {
-      return res.status(400).json({
-        message: "Payment method is required"
-      });
-    }
+    if (!products || !products.length || !paymentMethod)
+      return res.status(400).json({ message: "Products and payment method required" });
 
     let totalAmount = 0;
     const saleProducts = [];
 
+    // Update stock and calculate total
     for (const item of products) {
-      if (!item.productId || !item.quantity) {
-        throw new Error("Each product must have productId and quantity");
-      }
+      const product = await Product.findById(item.productId);
+      if (!product || !product.isActive)
+        return res.status(404).json({ message: `Product not found: ${item.productId}` });
 
-      const product = await Product.findById(item.productId).session(session);
+      if (item.quantity > product.stockQuantity)
+        return res.status(400).json({
+          message: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
+        });
 
-      if (!product || !product.isActive) {
-        throw new Error(`Product not found: ${item.productId}`);
-      }
-
-      if (item.quantity > product.stockQuantity) {
-        throw new Error(
-          `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
-        );
-      }
-
-      // Deduct stock
       product.stockQuantity -= item.quantity;
-      await product.save({ session });
+      await product.save();
 
-      const lineTotal = product.price * item.quantity;
-      totalAmount += lineTotal;
+      totalAmount += product.price * item.quantity;
 
       saleProducts.push({
         product: product._id,
         quantity: item.quantity,
-        price: product.price,
-        costPrice: product.costPrice
+        price: product.price
       });
     }
 
-    // Generate receipt number
+    // Generate unique receipt number
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const year = now.getFullYear();
@@ -63,40 +83,35 @@ export const createSale = async (req, res, next) => {
     const counter = await Counter.findOneAndUpdate(
       { month, year },
       { $inc: { sequence: 1 } },
-      { new: true, upsert: true, session }
+      { new: true, upsert: true }
     );
 
-    const sequence = String(counter.sequence).padStart(3, "0");
-    const receiptNumber = `SALE-${year}-${month}-${sequence}`;
+    const sequence = String(counter.sequence).padStart(2, "0");
+    const receiptNumber = `sale-${month}-${year}-${sequence}`;
 
-    const sale = await Sale.create(
-      [
-        {
-          receiptNumber,
-          products: saleProducts,
-          totalAmount,
-          cashier: req.user._id,
-          paymentMethod
-        }
-      ],
-      { session }
-    );
+    // Create sale
+    const sale = await Sale.create({
+      receiptNumber,
+      products: saleProducts,
+      totalAmount,
+      cashier: req.user._id,
+      paymentMethod
+    });
 
-    await session.commitTransaction();
-    session.endSession();
+    // Generate PDF receipt
+    const pdfPath = generatePDFReceipt(sale);
 
     res.status(201).json({
       success: true,
       message: "Sale created successfully",
-      data: sale[0]
+      data: sale,
+      receiptPDF: pdfPath
     });
-
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     next(error);
   }
 };
+
 export const getSaleById = async (req, res, next) => {
   try {
     const { id } = req.params;

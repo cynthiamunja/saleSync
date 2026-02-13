@@ -7,7 +7,7 @@ const categoryRouter= Router();
 
 categoryRouter.route("/createCategory").post(authorize(["manager","admin"]),createCategory);
 categoryRouter.route("/getAllCategories").get(authorize(),getAllCategories);
-categoryRouter.route("/getOneCategory/:id").get(getOneCategory);
+categoryRouter.route("/getOneCategory/:id").get(authorize(),getOneCategory);
 categoryRouter.route("/updateCategory/:id").patch(authorize(["manager","admin"]),updateCategory)
 categoryRouter.route("/deactivateCategory/:id").patch(authorize(["manager","admin"]),deactivateCategory)
 categoryRouter.route("/activateCategory/:id").patch(authorize(["manager","admin"]),activateCategory)
