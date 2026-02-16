@@ -26,16 +26,15 @@ reportsRouter.route('/exportSalesToPDF').get(authorize(['admin','manager']),expo
  *   get:
  *     summary: Get daily revenue
  *     tags: [Reports]
- * *     security:
+ *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: date
- *         in: query
+ *       - in: query
+ *         name: date
  *         required: true
  *         schema:
  *           type: string
  *           format: date
- *         description: Date in YYYY-MM-DD
  *     responses:
  *       200:
  *         description: Daily revenue summary
@@ -45,7 +44,7 @@ reportsRouter.route('/exportSalesToPDF').get(authorize(['admin','manager']),expo
  * @swagger
  * /reports/ProfitReport:
  *   get:
- *     summary: Get profit report (selling price vs cost price)
+ *     summary: Get profit report
  *     tags: [Reports]
  *     security:
  *       - bearerAuth: []

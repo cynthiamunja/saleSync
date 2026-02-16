@@ -29,7 +29,7 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  * @swagger
  * /api/v1/sales/createSale:
  *   post:
- *     summary: Create a new sale (Cashier only)
+ *     summary: Create a new sale
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
@@ -39,14 +39,13 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - products
- *               - paymentMethod
+ *             required: [products, paymentMethod]
  *             properties:
  *               products:
  *                 type: array
  *                 items:
  *                   type: object
+ *                   required: [productId, quantity]
  *                   properties:
  *                     productId:
  *                       type: string
@@ -63,52 +62,52 @@ salesRouter.patch("/deactivateSale/:id", authorize(["admin", "manager"]), deacti
  * @swagger
  * /api/v1/sales/my-sales:
  *   get:
- *     summary: Get logged-in cashier's sales
+ *     summary: Get logged-in cashier sales
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of cashier's sales
+ *         description: Cashier sales list
  */
 
 /**
  * @swagger
  * /api/v1/sales/getAllSales:
  *   get:
- *     summary: Get all sales (Admin/Manager)
+ *     summary: Get all sales
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all sales
+ *         description: All sales list
  */
 
 /**
  * @swagger
  * /api/v1/sales/getActiveSales:
  *   get:
- *     summary: Get active sales only (Admin/Manager)
+ *     summary: Get active sales
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of active sales
+ *         description: Active sales list
  */
 
 /**
  * @swagger
  * /api/v1/sales/deactivateSale/{id}:
  *   patch:
- *     summary: Deactivate a sale (Admin/Manager)
+ *     summary: Deactivate a sale
  *     tags: [Sales]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string

@@ -20,16 +20,16 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  * @swagger
  * tags:
  *   name: Users
- *   description: User management (admins, managers, cashiers)
+ *   description: User management
  */
 
 /**
  * @swagger
  * /api/v1/users/getUser/{id}:
  *   get:
- *     summary: Get a user by ID
+ *     summary: Get user by ID
  *     tags: [Users]
- * *     security:
+ *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
@@ -39,7 +39,7 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *           type: string
  *     responses:
  *       200:
- *         description: User data returned
+ *         description: User retrieved
  */
 
 /**
@@ -52,7 +52,7 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of cashiers
+ *         description: Cashiers list
  */
 
 /**
@@ -65,14 +65,14 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of managers
+ *         description: Managers list
  */
 
 /**
  * @swagger
  * /api/v1/users/updateUser:
  *   patch:
- *     summary: Update current user info
+ *     summary: Update current user
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -83,7 +83,7 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *             type: object
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: User updated
  */
 
 /**
@@ -107,7 +107,8 @@ userRouter.route('/searchUsers').get(authorize(['admin','manager']), searchUsers
  *             type: object
  *     responses:
  *       200:
- *         description: User updated successfully
+ *         description: User updated
  */
+
 
 export default userRouter;

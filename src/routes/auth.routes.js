@@ -29,6 +29,7 @@ authRouter.route("/login").post(login);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [fullName, email, password, phoneNumber]
  *             properties:
  *               fullName:
  *                 type: string
@@ -57,6 +58,7 @@ authRouter.route("/login").post(login);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [fullName, email, password, role, phoneNumber]
  *             properties:
  *               fullName:
  *                 type: string
@@ -88,6 +90,7 @@ authRouter.route("/login").post(login);
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [fullName, email, password, phoneNumber]
  *             properties:
  *               fullName:
  *                 type: string
@@ -108,14 +111,13 @@ authRouter.route("/login").post(login);
  *   post:
  *     summary: Login a user
  *     tags: [Auth]
- *      security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [email, password]
  *             properties:
  *               email:
  *                 type: string
@@ -125,5 +127,6 @@ authRouter.route("/login").post(login);
  *       200:
  *         description: Login successful, returns JWT
  */
+
 
 export default authRouter;

@@ -35,12 +35,7 @@ productsRouter.route('/searchProducts').get(authorize(),searchProducts);
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - price
- *               - costPrice
- *               - stockQuantity
- *               - category
+ *             required: [name, price, costPrice, stockQuantity, category]
  *             properties:
  *               name:
  *                 type: string
@@ -78,17 +73,17 @@ productsRouter.route('/searchProducts').get(authorize(),searchProducts);
  *   get:
  *     summary: Get product by ID
  *     tags: [Products]
- *       security:
+ *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Product object
+ *         description: Product found
  *       404:
  *         description: Product not found
  */
@@ -102,9 +97,11 @@ productsRouter.route('/searchProducts').get(authorize(),searchProducts);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -124,7 +121,7 @@ productsRouter.route('/searchProducts').get(authorize(),searchProducts);
  *                 type: string
  *     responses:
  *       200:
- *         description: Product updated
+ *         description: Product updated successfully
  */
 
 export default productsRouter;
