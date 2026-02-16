@@ -1,166 +1,208 @@
 import { Category } from "../models/category.model.js";
 
+import mongoose from "mongoose";
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const escapeRegex = (text) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const serializeCategory = (category) => ({
+  id: category._id,
+  name: category.name,
+  description: category.description,
+  isActive: category.isActive,
+  createdAt: category.createdAt
+});
 export const createCategory = async (req, res, next) => {
-    console.log("req.body:", req.body); // <- DEBUG
   try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     const { name, description } = req.body;
 
-    if (!name) {
+    if (!name || !name.trim()) {
       return res.status(400).json({ message: "Category name is required" });
     }
 
-    // Check if category exists
-    const exists = await Category.findOne({ name });
+    const normalizedName = name.trim().toLowerCase();
+
+    const exists = await Category.findOne({
+      name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" }
+    });
+
     if (exists) {
       return res.status(409).json({ message: "Category already exists" });
     }
 
-    // Create category
-    const newCategory = await Category.create({
-      name,
+    const category = await Category.create({
+      name: normalizedName,
       description,
       createdBy: req.user._id
     });
 
     res.status(201).json({
       success: true,
-      message: "Category created",
-      data: newCategory
+      message: "Category created successfully",
+      data: serializeCategory(category)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const getOneCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: serializeCategory(category)
     });
   } catch (error) {
     next(error);
   }
 };
 
-export const getAllCategories= async(req, res)=>{
-    try{
-      const categories= await Category.find({isActive:true})
-      .sort({createdAt:-1})
+export const getAllCategories = async (req, res, next) => {
+  try {
+    const categories = await Category.find({ isActive: true })
+      .sort({ createdAt: -1 });
 
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories.map(serializeCategory)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const updateCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, description, isActive } = req.body;
 
-      res.status(200).json({
-        status:"success",
-        results:categories.length,
-        data:categories
-      })
-    } catch(error){
-      next (error)
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid category ID" });
     }
 
-}
-export const getOneCategory=async(req,res, next)=>{
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
 
-  try {
-      const categoryId= req.params.id;
-      const category= await Category.findById(categoryId)
-      if(!category) return res.status(404).json({message:"category not found"})
+    if (name && name.trim().toLowerCase() !== category.name) {
+      const normalizedName = name.trim().toLowerCase();
+      const exists = await Category.findOne({
+        name: { $regex: `^${escapeRegex(normalizedName)}$`, $options: "i" }
+      });
 
-      res.status(200).json({
-        success:true,
-        message:"the category",
-        data:category
-      })
-  } catch (error) {
-    next(error)
-  }
-}
-export const updateCategory= async (req, res, next)=>{
-try {
+      if (exists) {
+        return res.status(409).json({ message: "Category name already exists" });
+      }
 
-   const categoryId= req.params.id
-  const {name, description, isActive}=req.body
-  const category= await Category.findById(categoryId)
+      category.name = normalizedName;
+    }
 
-  if(!category){
-    return res.status(404).json({message:"category not found"})
+    if (description !== undefined) {
+      category.description = description;
+    }
 
-  }
-if(name && name!== category.name){
-  const exists= await Category.findOne({name});
-  if(exists){
-    return res.status(409).json({ message: "Category name already exists" });
-  }
-  category.name=name;
-}
-if (description!==undefined){
-  category.description=description
-}
-    if (isActive !== undefined) {
+    if (typeof isActive === "boolean") {
       category.isActive = isActive;
     }
 
     await category.save();
+
     res.status(200).json({
-      success:true,
-      message:"category updated successfully",
-      data:category
-    })
-} catch (error) {
-  next(error);
-}
-
-}
-
-export const deactivateCategory= async (req, res, next)=>{
+      success: true,
+      message: "Category updated successfully",
+      data: serializeCategory(category)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const deactivateCategory = async (req, res, next) => {
   try {
-    const categoryId= req.params.id;
-    const category= await Category.findById(categoryId)
+    const { id } = req.params;
 
-    if (!category){
-      return res.status(404).json({message:"category not found"})
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid category ID" });
     }
-    if(!category.isActive){
-      res.status(400).json({
-        message:"category is already inactive"
-      })
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
     }
-    category.isActive=false
+
+    if (!category.isActive) {
+      return res.status(400).json({ message: "Category already inactive" });
+    }
+
+    category.isActive = false;
     await category.save();
 
     res.status(200).json({
       success: true,
       message: "Category deactivated successfully",
-      data: category
-    })
+      data: serializeCategory(category)
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
-export const activateCategory= async (req, res, next)=>{
-  try {
-    const categoryId= req.params.id;
-    const category= await Category.findById(categoryId)
+};
 
-    if (!category){
-      return res.status(404).json({message:"category not found"})
+export const activateCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid category ID" });
     }
-    if(category.isActive){
-      res.status(400).json({
-        message:"category is already active"
-      })
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
     }
-    category.isActive=true;
+
+    if (category.isActive) {
+      return res.status(400).json({ message: "Category already active" });
+    }
+
+    category.isActive = true;
     await category.save();
 
     res.status(200).json({
       success: true,
       message: "Category activated successfully",
-      data: category
-    })
+      data: serializeCategory(category)
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
-
+};
 export const searchCategories = async (req, res, next) => {
   try {
     const { q } = req.query;
 
-    let filter = {};
+    const filter = { isActive: true };
 
-    if (q && typeof q === "string" && q.trim() !== "") {
-      filter.name = { $regex: q.trim(), $options: "i" };
+    if (q && typeof q === "string" && q.trim()) {
+      filter.name = {
+        $regex: escapeRegex(q.trim()),
+        $options: "i"
+      };
     }
 
     const categories = await Category.find(filter);
@@ -168,12 +210,9 @@ export const searchCategories = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: categories.length,
-      data: categories
+      data: categories.map(serializeCategory)
     });
-
   } catch (error) {
     next(error);
   }
 };
-
-

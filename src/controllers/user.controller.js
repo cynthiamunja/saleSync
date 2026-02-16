@@ -72,136 +72,97 @@ export const getManagers = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
-export const updateOneUser= async(req, res)=>{
-try {
+// Helper to validate ObjectId
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+// Escape regex input to prevent ReDoS
+const escapeRegex = (text) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+
+export const updateOneUser = async (req, res, next) => {
+  try {
     const { fullName, email, phoneNumber, password } = req.body;
     const userId = req.user._id;
 
     const updates = {};
 
-    // 🔹 Full name
     if (fullName) updates.fullName = fullName;
 
-    // 🔹 Email (check uniqueness)
     if (email) {
       const emailExists = await User.findOne({
         email: email.toLowerCase(),
-        _id: { $ne: userId } // 👈 exclude self
+        _id: { $ne: userId }
       });
-
-      if (emailExists) {
-        return res.status(409).json({
-          message: "Email already in use"
-        });
-      }
-
+      if (emailExists) return res.status(409).json({ message: "Email already in use" });
       updates.email = email.toLowerCase();
     }
 
-    // 🔹 Phone number (check uniqueness)
     if (phoneNumber) {
       const phoneExists = await User.findOne({
         phoneNumber,
         _id: { $ne: userId }
       });
-
-      if (phoneExists) {
-        return res.status(409).json({
-          message: "Phone number already in use"
-        });
-      }
-
+      if (phoneExists) return res.status(409).json({ message: "Phone number already in use" });
       updates.phoneNumber = phoneNumber;
     }
 
-    // 🔹 Password
     if (password) {
       const salt = await bcrypt.genSalt(10);
       updates.password = await bcrypt.hash(password, salt);
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updates,
-      { new: true }
-    ).select("-password");
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true }).select("-password");
 
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
       data: updatedUser
     });
-
   } catch (error) {
     next(error);
   }
 };
 
-
 export const managerUpdateCashier = async (req, res, next) => {
   try {
     const cashierId = req.params.id;
-    const { fullName, email, phoneNumber } = req.body;
+
+    if (!isValidObjectId(cashierId)) return res.status(400).json({ message: "Invalid cashier ID" });
 
     const cashier = await User.findById(cashierId);
-    if (!cashier) {
-      return res.status(404).json({ message: "Cashier not found" });
-    }
+    if (!cashier) return res.status(404).json({ message: "Cashier not found" });
+    if (cashier.role !== "cashier") return res.status(403).json({ message: "Managers can only update cashiers" });
 
-    if (cashier.role !== "cashier") {
-      return res.status(403).json({
-        message: "Managers can only update cashiers"
-      });
-    }
-
+    const { fullName, email, phoneNumber } = req.body;
     const updates = {};
 
     if (fullName) updates.fullName = fullName;
 
     if (email) {
-      const emailExists = await User.findOne({
-        email: email.toLowerCase(),
-        _id: { $ne: cashierId }
-      });
-
-      if (emailExists) {
-        return res.status(409).json({ message: "Email already in use" });
-      }
-
+      const emailExists = await User.findOne({ email: email.toLowerCase(), _id: { $ne: cashierId } });
+      if (emailExists) return res.status(409).json({ message: "Email already in use" });
       updates.email = email.toLowerCase();
     }
 
     if (phoneNumber) {
-      const phoneExists = await User.findOne({
-        phoneNumber,
-        _id: { $ne: cashierId }
-      });
-
-      if (phoneExists) {
-        return res.status(409).json({ message: "Phone number already in use" });
-      }
-
+      const phoneExists = await User.findOne({ phoneNumber, _id: { $ne: cashierId } });
+      if (phoneExists) return res.status(409).json({ message: "Phone number already in use" });
       updates.phoneNumber = phoneNumber;
     }
 
-   
-
-    const updatedCashier = await User.findByIdAndUpdate(
-      cashierId,
-      updates,
-      { new: true }
-    ).select("-password");
+    // 🔒 Ignore role & password
+    const updatedCashier = await User.findByIdAndUpdate(cashierId, updates, { new: true }).select("-password");
 
     res.status(200).json({
       success: true,
       message: "Cashier updated successfully",
       data: updatedCashier
     });
-
   } catch (error) {
     next(error);
   }
 };
+
+
 
 export const adminUpdateUser= async (req, res, next)=>{
   try {
@@ -402,34 +363,30 @@ export const adminDeactivateUser = async (req, res, next) => {
     next(error);
   }
 };
-export const searchUsers= async(req, res, next)=>{
+export const searchUsers = async (req, res, next) => {
   try {
-    const {q}=req.query;
-    const currentUser=req.user
-    let filter={};
+    const { q } = req.query;
+    const currentUser = req.user;
+    const filter = {};
 
-    //name or email search
-    if(q && typeof q=== "string" && q.trim()!==""){
-      filter.$or=[
-        {fullName:{$regex:q.trim(), $options:"i"}},
-        { email: { $regex: q.trim(), $options: "i" } }
-
-      ]
+    if (q && typeof q === "string" && q.trim() !== "") {
+      const safeQ = escapeRegex(q.trim().slice(0, 100)); // limit to 100 chars
+      filter.$or = [
+        { fullName: { $regex: safeQ, $options: "i" } },
+        { email: { $regex: safeQ, $options: "i" } }
+      ];
     }
 
-     if (currentUser.role === "manager") {
-      filter.role = "cashier"; // manager can only see cashiers
-    }
+    if (currentUser.role === "manager") filter.role = "cashier";
 
-        const users = await User.find(filter).select("-password");
+    const users = await User.find(filter).select("-password");
 
     res.status(200).json({
       success: true,
       count: users.length,
       data: users
     });
-
   } catch (error) {
     next(error);
   }
-}
+};

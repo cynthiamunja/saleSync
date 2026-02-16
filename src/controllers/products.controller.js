@@ -1,25 +1,36 @@
 import { Category } from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
+import mongoose from "mongoose";
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const escapeRegex = (text) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const createProduct = async (req, res, next) => {
   try {
     const { name, description, price, costPrice, stockQuantity, category } = req.body;
 
-    // Required fields validation
-    if (!name || !description || !price || !costPrice || !stockQuantity || !category) {
+    if (!name || !description || price == null || costPrice == null || stockQuantity == null || !category) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Ensure category exists
+    if (![price, costPrice, stockQuantity].every(n => typeof n === "number" && n >= 0)) {
+      return res.status(400).json({ message: "Invalid numeric values" });
+    }
+
+    if (!isValidObjectId(category)) {
+      return res.status(400).json({ message: "Invalid category ID" });
+    }
+
     const existingCategory = await Category.findById(category);
     if (!existingCategory) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Create product
     const product = await Product.create({
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim(),
       price,
       costPrice,
       stockQuantity,
@@ -30,35 +41,41 @@ export const createProduct = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Product created",
-      data: product
+      data: {
+        id: product._id,
+        name: product.name
+      }
     });
+
   } catch (error) {
     next(error);
   }
 };
 
+
 export const getProducts = async (req, res, next) => {
   try {
     const { category, active } = req.query;
-    let filter = {};
+    const filter = {};
 
-    if (category) {
+    if (category && isValidObjectId(category)) {
       filter.category = category;
     }
 
-    if (active) {
-      filter.isActive = true; // fixed typo
+    if (active === "true") {
+      filter.isActive = true;
     }
 
     const products = await Product.find(filter)
-      .populate("category", "name") // only populate category name
-      .select("-__v"); // keep all product fields, including description
+      .populate("category", "name")
+      .select("-costPrice -__v");
 
     res.status(200).json({
       success: true,
       count: products.length,
-      data: products,
+      data: products
     });
+
   } catch (error) {
     next(error);
   }
@@ -86,63 +103,69 @@ export const getProductById = async (req, res, next) => {
   }
 };
 
-export const updateProduct= async (req, res, next)=>{
+export const updateProduct = async (req, res, next) => {
+  try {
+    const updates = {};
+    const allowedFields = ["name", "description", "price", "costPrice", "stockQuantity"];
 
-    try{
-        const{name, description, price, costPrice, stockQuantity, category } = req.body;
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
 
-        const product= await Product.findById(req.params.id);
-        if (!product){
-            return res.status.json({
-                message:"product not found"
-            })
-        }
-        if (category){
-            const categoryExists= await Category.findById(category);
-            if(!categoryExists){
-                return res.status(404).json({message:"category not found"})
+    if (updates.price < 0 || updates.costPrice < 0 || updates.stockQuantity < 0) {
+      return res.status(400).json({ message: "Invalid numeric values" });
+    }
 
-            }
-            product.category=category;
+    if (req.body.category) {
+      if (!isValidObjectId(req.body.category)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+      updates.category = req.body.category;
+    }
 
-        }
-        if (name) product.name = name;
-    if (description) product.description = description;
-    if (price >= 0) product.price = price;
-    if (costPrice >= 0) product.costPrice = costPrice;
-    if (stockQuantity >= 0) product.stockQuantity = stockQuantity;
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
 
-    await product.save();
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
-      res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "Product updated",
       data: product
     });
 
-    
-    } catch(error){
-        next (error)
-    }
-}
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateStock = async (req, res, next) => {
   try {
-    const { stockQuantity } = req.body; // can be + or -
+    const { stockQuantity } = req.body;
 
-    const product = await Product.findById(req.params.id);
+    if (typeof stockQuantity !== "number") {
+      return res.status(400).json({ message: "Invalid stock value" });
+    }
 
-    if (!product) return res.status(404).json({ message: "Product not found" });
+    const product = await Product.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        stockQuantity: { $gte: -stockQuantity }
+      },
+      { $inc: { stockQuantity } },
+      { new: true }
+    );
 
-    const newStock = product.stockQuantity + stockQuantity;
-    if (newStock < 0) {
-  return res.status(400).json({
-    message: "Stock cannot go below zero"
-  });
-}
-
-
-    product.stockQuantity = newStock;
-    await product.save();
+    if (!product) {
+      return res.status(400).json({ message: "Insufficient stock or product not found" });
+    }
 
     res.status(200).json({
       message: "Stock updated",
@@ -153,6 +176,7 @@ export const updateStock = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const deactivateProduct = async (req, res, next) => {
   try {
@@ -194,18 +218,18 @@ export const activateProduct = async (req, res, next) => {
     next(error);
   }
 };
+
 export const searchProducts = async (req, res, next) => {
   try {
-    const { q } = req.query;
+    const q = req.query.q?.trim();
 
-    let filter = {};
-
-    if (q && q.trim() !== "") {
-      filter.name = { $regex: q.trim(), $options: "i" };
-    }
+    const filter = q
+      ? { name: { $regex: escapeRegex(q.slice(0, 50)), $options: "i" } }
+      : {};
 
     const products = await Product.find(filter)
-      .populate("category", "name");
+      .populate("category", "name")
+      .select("-costPrice");
 
     res.status(200).json({
       success: true,

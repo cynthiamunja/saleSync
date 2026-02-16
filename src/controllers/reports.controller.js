@@ -2,19 +2,15 @@ import { Sale } from "../models/sales.models.js";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
-/* ======================================================
-   DATE HELPERS
-====================================================== */
+
 
 const getDayRange = (dateStr) => {
-  const date = new Date(dateStr);
-  if (isNaN(date)) throw new Error("Invalid date format. Use YYYY-MM-DD.");
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (isNaN(date)) throw new Error("Invalid date");
 
   const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-
   const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
+  end.setUTCHours(23, 59, 59, 999);
 
   return { start, end };
 };
@@ -40,10 +36,23 @@ const getYearRange = (yearStr) => {
 
   return { start, end };
 };
+const MAX_RANGE_DAYS = 366;
 
-/* ======================================================
-   DAILY REVENUE
-====================================================== */
+const validateRange = (start, end) => {
+  const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+  if (diffDays > MAX_RANGE_DAYS) {
+    throw new Error("Date range too large");
+  }
+};
+
+const safeCell = (value) => {
+  if (typeof value === "string" && /^[=+\-@]/.test(value)) {
+    return `'${value}`;
+  }
+  return value;
+};
+
+
 
 export const getDailyRevenue = async (req, res, next) => {
   try {
@@ -74,9 +83,7 @@ export const getDailyRevenue = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   MONTHLY SUMMARY
-====================================================== */
+
 
 export const getMonthlySummary = async (req, res, next) => {
   try {
@@ -112,9 +119,7 @@ export const getMonthlySummary = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   MONTHLY BREAKDOWN (BY DAY)
-====================================================== */
+
 
 export const getMonthlyBreakdown = async (req, res, next) => {
   try {
@@ -143,9 +148,6 @@ export const getMonthlyBreakdown = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   YEARLY SUMMARY
-====================================================== */
 
 export const getYearlySummary = async (req, res, next) => {
   try {
@@ -176,10 +178,7 @@ export const getYearlySummary = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   PROFIT REPORT (MONTHLY)
-   NOTE: products must store costPrice inside sale
-====================================================== */
+
 
 export const getProfitReport = async (req, res, next) => {
   try {
@@ -226,9 +225,7 @@ export const getProfitReport = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   TOP SELLING PRODUCTS (MONTHLY)
-====================================================== */
+
 
 export const getTopSellingProducts = async (req, res, next) => {
   try {
@@ -261,9 +258,7 @@ export const getTopSellingProducts = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   SALES BY PAYMENT METHOD (MONTHLY)
-====================================================== */
+
 
 export const getSalesByPaymentMethod = async (req, res, next) => {
   try {
@@ -291,34 +286,48 @@ export const getSalesByPaymentMethod = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   EXPORT TO EXCEL
-====================================================== */
 
 export const exportSalesToExcel = async (req, res, next) => {
   try {
-    const sales = await Sale.find({ isActive: true });
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "startDate and endDate required" });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    validateRange(start, end);
+
+    const salesCursor = Sale.find({
+      isActive: true,
+      createdAt: { $gte: start, $lte: end }
+    })
+      .select("receiptNumber totalAmount paymentMethod createdAt")
+      .cursor();
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Sales Report");
+    const worksheet = workbook.addWorksheet("Sales");
 
     worksheet.columns = [
-      { header: "Receipt", key: "receiptNumber" },
-      { header: "Amount", key: "totalAmount" },
-      { header: "Payment", key: "paymentMethod" },
-      { header: "Date", key: "createdAt" }
+      { header: "Receipt", key: "receipt" },
+      { header: "Amount", key: "amount" },
+      { header: "Payment", key: "payment" },
+      { header: "Date", key: "date" }
     ];
 
-    sales.forEach(sale => worksheet.addRow(sale));
+    for await (const sale of salesCursor) {
+      worksheet.addRow({
+        receipt: safeCell(sale.receiptNumber),
+        amount: sale.totalAmount,
+        payment: safeCell(sale.paymentMethod),
+        date: sale.createdAt
+      });
+    }
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=sales-report.xlsx"
-    );
+    res.setHeader("Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition",
+      "attachment; filename=sales-report.xlsx");
 
     await workbook.xlsx.write(res);
     res.end();
@@ -328,15 +337,26 @@ export const exportSalesToExcel = async (req, res, next) => {
   }
 };
 
-/* ======================================================
-   EXPORT TO PDF
-====================================================== */
 
 export const exportSalesToPDF = async (req, res, next) => {
   try {
-    const sales = await Sale.find({ isActive: true });
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "startDate and endDate required" });
+    }
 
-    const doc = new PDFDocument();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    validateRange(start, end);
+
+    const sales = await Sale.find({
+      isActive: true,
+      createdAt: { $gte: start, $lte: end }
+    })
+      .select("receiptNumber totalAmount paymentMethod createdAt")
+      .lean();
+
+    const doc = new PDFDocument({ margin: 40 });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -349,15 +369,15 @@ export const exportSalesToPDF = async (req, res, next) => {
     doc.fontSize(18).text("Sales Report", { align: "center" });
     doc.moveDown();
 
-    sales.forEach(sale => {
+    for (const sale of sales) {
       doc
-        .fontSize(12)
+        .fontSize(11)
         .text(`Receipt: ${sale.receiptNumber}`)
         .text(`Amount: ${sale.totalAmount}`)
         .text(`Payment: ${sale.paymentMethod}`)
-        .text(`Date: ${sale.createdAt}`)
+        .text(`Date: ${sale.createdAt.toISOString()}`)
         .moveDown();
-    });
+    }
 
     doc.end();
 
@@ -365,3 +385,4 @@ export const exportSalesToPDF = async (req, res, next) => {
     next(error);
   }
 };
+
