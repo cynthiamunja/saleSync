@@ -5,18 +5,19 @@ import jwt from "jsonwebtoken";
 export const authorize = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
-      let token;
-
-      if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
-        token = req.headers.authorization.split(" ")[1];
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (!token) return res.status(401).json({ message: "Unauthorized" });
-
+      const token = authHeader.split(" ")[1];
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      const user = await User.findById(decoded.userID);
-      if (!user || !user.isActive) return res.status(401).json({ message: "Unauthorized" });
+      // ✅ Use 'sub' instead of 'userID'
+      const user = await User.findById(decoded.sub);
+      if (!user || !user.isActive) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
       if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
         return res.status(403).json({ message: "Forbidden" });
@@ -29,3 +30,4 @@ export const authorize = (allowedRoles = []) => {
     }
   };
 };
+
