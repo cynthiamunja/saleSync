@@ -65,7 +65,7 @@ categoryRouter.route("/searchCategories").get(authorize(), searchCategories);
  *   get:
  *     summary: Get category by ID
  *     tags: [Categories]
- *    security:
+ *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: id
@@ -117,14 +117,14 @@ categoryRouter.route("/searchCategories").get(authorize(), searchCategories);
  *   patch:
  *     summary: Activate a category
  *     tags: [Categories]
- *      security:
- *       - bearerAuth: []
  *     security:
  *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
  *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Category activated
@@ -142,6 +142,8 @@ categoryRouter.route("/searchCategories").get(authorize(), searchCategories);
  *       - name: id
  *         in: path
  *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
  *         description: Category deactivated
