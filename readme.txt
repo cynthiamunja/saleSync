@@ -1,6 +1,4 @@
-Absolutely! Based on everything you’ve shared about your system — users, roles, modules, sales, reports, authorization, and business logic — here’s a **fully descriptive README** for your project. I’ve structured it in a professional, detailed, and clear way.
 
----
 
 # 🏥 POS & Inventory Management System
 
